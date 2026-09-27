@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clanker Fee Checker</title>
+<style>
+  :root{
+    --bg:#0b0b0f; --card:#15151c; --card2:#1c1c26; --border:#2a2a35;
+    --purple:#7c5cff; --purple2:#5b3df0; --green:#3ecf8e; --text:#f2f2f5;
+    --muted:#9a9aa8; --danger:#ff5c7a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--text); padding:16px; min-height:100vh;
+  }
+  .wrap{max-width:680px; margin:0 auto;}
+  h1{font-size:1.3rem; margin:4px 0 2px; display:flex; align-items:center; gap:8px;}
+  .sub{color:var(--muted); font-size:0.85rem; margin-bottom:18px; line-height:1.4;}
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    padding:16px; margin-bottom:14px;
+  }
+  label{font-size:0.8rem; color:var(--muted); display:block; margin-bottom:6px;}
+  textarea{
+    width:100%; background:var(--card2); border:1px solid var(--border); color:var(--text);
+    padding:12px 14px; border-radius:10px; font-size:0.9rem; font-family:monospace;
+    min-height:110px; resize:vertical; line-height:1.5;
+  }
+  textarea:focus{outline:1px solid var(--purple);}
+  .filerow{display:flex; align-items:center; gap:10px; margin-top:10px; flex-wrap:wrap;}
+  .filebtn{
+    background:var(--card2); border:1px solid var(--border); color:var(--text);
+    padding:9px 14px; border-radius:10px; font-size:0.82rem; cursor:pointer; display:inline-block;
+  }
+  .filebtn:hover{border-color:var(--purple);}
+  input[type=file]{display:none;}
+  #fileNameEl{font-size:0.78rem; color:var(--muted);}
+  .countBadge{font-size:0.78rem; color:var(--muted); margin-left:auto;}
+  button.run{
+    background:var(--purple); color:#fff; border:none; padding:13px 18px;
+    border-radius:10px; font-size:0.95rem; font-weight:600; cursor:pointer; width:100%;
+    margin-top:14px; transition:background .15s;
+  }
+  button.run:hover{background:var(--purple2);}
+  button.run:disabled{background:#4a4a58; cursor:not-allowed;}
+  .status{font-size:0.82rem; color:var(--muted); margin-top:10px; min-height:18px;}
+  .status.err{color:var(--danger);}
+  .grandtotal{
+    background:linear-gradient(135deg, #241a45, #1a1a2e); border:1px solid var(--purple);
+    border-radius:14px; padding:18px; text-align:center; margin-bottom:14px; display:none;
+  }
+  .grandtotal .label{color:var(--muted); font-size:0.8rem;}
+  .grandtotal .amount{font-size:2rem; font-weight:700; color:var(--green); margin-top:4px;}
+  .grandtotal .amount span{font-size:1rem; color:var(--text); font-weight:500;}
+  .grandtotal .sub2{font-size:0.75rem; color:var(--muted); margin-top:6px;}
+
+  #results{display:flex; flex-direction:column; gap:12px;}
+  details.addrCard{
+    background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden;
+  }
+  details.addrCard[open] summary{border-bottom:1px solid var(--border);}
+  summary{
+    padding:14px 16px; cursor:pointer; list-style:none; display:flex; align-items:center; gap:10px;
+  }
+  summary::-webkit-details-marker{display:none;}
+  summary .chev{color:var(--muted); font-size:0.8rem; transition:transform .15s;}
+  details[open] summary .chev{transform:rotate(90deg);}
+  summary .addrText{font-family:monospace; font-size:0.85rem; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  summary .weth{color:var(--green); font-weight:700; font-size:0.9rem; white-space:nowrap;}
+  summary .errTag{color:var(--danger); font-size:0.78rem;}
+  .addrBody{padding:12px 16px 16px;}
+  .tokenList{display:flex; flex-direction:column; gap:10px;}
+  .token{
+    background:var(--card2); border:1px solid var(--border); border-radius:12px;
+    padding:12px 14px; display:flex; align-items:center; gap:12px;
+  }
+  .token img{width:36px; height:36px; border-radius:50%; background:#333; object-fit:cover; flex-shrink:0;}
+  .token .noimg{width:36px; height:36px; border-radius:50%; background:#333; display:flex; align-items:center; justify-content:center; font-size:0.72rem; color:var(--muted); flex-shrink:0;}
+  .token .info{flex:1; min-width:0;}
+  .token .name{font-weight:600; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .token .addr2{color:var(--muted); font-size:0.7rem; font-family:monospace;}
+  .token .fees{text-align:right; font-size:0.76rem; flex-shrink:0;}
+  .token a.claimlink{
+    display:inline-block; margin-top:6px; font-size:0.7rem; color:var(--purple);
+    text-decoration:none; border:1px solid var(--purple); padding:3px 8px; border-radius:6px;
+  }
+  .empty{color:var(--muted); font-size:0.82rem; text-align:center; padding:14px 0;}
+  .note{font-size:0.72rem; color:var(--muted); line-height:1.5; margin-top:4px;}
+  .badge{display:inline-block; background:var(--card2); border:1px solid var(--border); border-radius:6px; padding:2px 6px; font-size:0.66rem; color:var(--muted); margin-left:6px;}
+  .spinner{
+    width:16px; height:16px; border:2px solid rgba(255,255,255,.25); border-top-color:#fff;
+    border-radius:50%; display:inline-block; animation:spin .7s linear infinite; vertical-align:middle; margin-right:6px;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔍 Clanker Fee Checker</h1>
+  <div class="sub">Cek banyak wallet sekaligus: token Clanker apa saja yang di-deploy di <b>Base</b>, dan berapa WETH / token yang bisa di-claim untuk tiap alamat — tanpa connect wallet.</div>
+
+  <div class="card">
+    <label for="addrsInput">Alamat wallet (satu per baris, atau pisahkan dengan koma/spasi)</label>
+    <textarea id="addrsInput" placeholder="0x23C83f3378e8E99286aBC1C8813c78F129521b07&#10;0xDF2237114d595e0Bf4D35CBcdEBcdF43C5xxxxxx&#10;..."></textarea>
+
+    <div class="filerow">
+      <label class="filebtn" for="fileInput">📄 Upload file .txt</label>
+      <input type="file" id="fileInput" accept=".txt,text/plain">
+      <span id="fileNameEl"></span>
+      <span class="countBadge" id="countBadge"></span>
+    </div>
+
+    <button class="run" id="checkBtn">Cek Semua Address</button>
+    <div class="status" id="statusEl"></div>
+  </div>
+
+  <div class="grandtotal" id="grandTotalBox">
+    <div class="label">Total WETH claimable (semua address digabung)</div>
+    <div class="amount"><span id="grandWeth">0</span> <span>WETH</span></div>
+    <div class="sub2" id="grandSub"></div>
+  </div>
+
+  <div id="results"></div>
+
+  <div class="note">Catatan: hanya mendukung jaringan Base dan token Clanker versi v4 (v4.0.0/v4.1.0). Tool ini read-only — untuk klaim, buka link "Buka halaman claim" pada tiap token lalu connect wallet di sana.</div>
+</div>
+
+<script>
+const RPC_URLS = [
+  "https://base-rpc.publicnode.com",
+  "https://public.1rpc.io/base",
+  "https://mainnet.base.org",
+  "https://base.llamarpc.com"
+];
+const FEE_LOCKER_V4 = "0xF3622742b1E446D92e45E22923Ef11C2fcD55D68"; // ClankerFeeLocker v4.0.0/v4.1.0 - Base
+const WETH_ADDRESS = "0x4200000000000000000000000000000000000006"; // WETH on Base
+const SEARCH_API = "https://www.clanker.world/api/search-creator";
+const SELECTOR_AVAILABLE_FEES = "8296535a"; // keccak256("availableFees(address,address)")[:4]
+
+const addrsInput = document.getElementById("addrsInput");
+const fileInput = document.getElementById("fileInput");
+const fileNameEl = document.getElementById("fileNameEl");
+const countBadge = document.getElementById("countBadge");
+const checkBtn = document.getElementById("checkBtn");
+const statusEl = document.getElementById("statusEl");
+const grandTotalBox = document.getElementById("grandTotalBox");
+const grandWethEl = document.getElementById("grandWeth");
+const grandSub = document.getElementById("grandSub");
+const resultsEl = document.getElementById("results");
+
+// ---------- helpers ----------
+function pad32(addr){ return addr.toLowerCase().replace("0x","").padStart(64,"0"); }
+function shortAddr(a){ return a ? a.slice(0,6) + "..." + a.slice(-4) : ""; }
+
+function formatUnits(hexOrBigInt, decimals=18, maxDp=6){
+  let value = typeof hexOrBigInt === "bigint" ? hexOrBigInt : BigInt(hexOrBigInt);
+  const base = 10n ** BigInt(decimals);
+  const whole = value / base;
+  let frac = (value % base).toString().padStart(decimals, "0").slice(0, maxDp);
+  frac = frac.replace(/0+$/, "");
+  return frac.length ? `${whole.toString()}.${frac}` : whole.toString();
+}
+
+function parseAddresses(text){
+  const matches = text.match(/0x[a-fA-F0-9]{40}/g) || [];
+  const seen = new Set();
+  const result = [];
+  for(const m of matches){
+    const lower = m.toLowerCase();
+    if(!seen.has(lower)){ seen.add(lower); result.push(m); }
+  }
+  return result;
+}
+
+function updateCountBadge(){
+  const addrs = parseAddresses(addrsInput.value);
+  countBadge.textContent = addrs.length ? `${addrs.length} address terdeteksi` : "";
+}
+addrsInput.addEventListener("input", updateCountBadge);
+
+fileInput.addEventListener("change", () => {
+  const file = fileInput.files[0];
+  if(!file) return;
+  fileNameEl.textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const existing = addrsInput.value.trim();
+    const incoming = e.target.result;
+    addrsInput.value = existing ? existing + "\n" + incoming : incoming;
+    updateCountBadge();
+  };
+  reader.readAsText(file);
+});
+
+// ---------- network calls ----------
+async function rpcCall(to, dataHex){
+  const body = {
+    jsonrpc: "2.0", id: 1, method: "eth_call",
+    params: [{ to, data: "0x" + dataHex }, "latest"]
+  };
+  const opts = { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+  let lastErr = null;
+  for(const rpc of RPC_URLS){
+    try{
+      const res = await fetch(rpc, opts);
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const json = await res.json();
+      if(json.error) throw new Error(json.error.message || "RPC error");
+      return json.result;
+    }catch(e){ lastErr = e; }
+  }
+  throw new Error("Semua RPC Base gagal: " + (lastErr?.message || "network error"));
+}
+
+async function getAvailableFees(feeOwner, tokenAddress){
+  const data = SELECTOR_AVAILABLE_FEES + pad32(feeOwner) + pad32(tokenAddress);
+  try{
+    const result = await rpcCall(FEE_LOCKER_V4, data);
+    if(!result || result === "0x") return 0n;
+    return BigInt(result);
+  }catch(e){
+    return 0n;
+  }
+}
+
+async function fetchJsonWithFallback(url){
+  const candidates = [
+    url,
+    "https://api.allorigins.win/raw?url=" + encodeURIComponent(url),
+    "https://corsproxy.io/?url=" + encodeURIComponent(url),
+    "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url)
+  ];
+  let lastErr = null;
+  for(const candidate of candidates){
+    try{
+      const res = await fetch(candidate, { cache: "no-store" });
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      return await res.json();
+    }catch(e){ lastErr = e; }
+  }
+  throw new Error("API Clanker tidak dapat diakses dari browser. " + (lastErr?.message || "network error"));
+}
+
+async function fetchAllTokensByCreator(address){
+  let all = [];
+  let offset = 0;
+  const limit = 50;
+  let guard = 0;
+  while(guard < 20){
+    guard++;
+    const url = `${SEARCH_API}?q=${address}&limit=${limit}&offset=${offset}&sort=desc`;
+    const json = await fetchJsonWithFallback(url);
+    const tokens = json.tokens || [];
+    all = all.concat(tokens);
+    if(!json.hasMore || tokens.length === 0) break;
+    offset += limit;
+  }
+  return all;
+}
+
+// ---------- rendering ----------
+function tokenRowHTML(t, ownFee){
+  const addr = t.contract_address;
+  const symbol = (t.symbol || "?").slice(0,3);
+  const imgHtml = t.img_url
+    ? `<img src="${t.img_url}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'noimg',textContent:'${symbol}'}))">`
+    : `<div class="noimg">${symbol}</div>`;
+  return `
+    <div class="token">
+      ${imgHtml}
+      <div class="info">
+        <div class="name">${t.name || "Unknown"} <span class="badge">${t.symbol||""}</span></div>
+        <div class="addr2">${shortAddr(addr)}</div>
+        <a class="claimlink" href="https://www.clanker.world/clanker/${addr}/admin" target="_blank" rel="noopener">Buka halaman claim →</a>
+      </div>
+      <div class="fees">${t.symbol||"Token"}: ${formatUnits(ownFee)}</div>
+    </div>
+  `;
+}
+
+function buildAddressCard(address, state){
+  // state: { loading, error, tokens, feesMap, totalWeth }
+  const details = document.createElement("details");
+  details.className = "addrCard";
+  details.dataset.addr = address;
+  renderAddressCard(details, address, state);
+  return details;
+}
+
+function renderAddressCard(details, address, state){
+  let summaryRight = "";
+  if(state.loading){
+    summaryRight = `<span class="status"><span class="spinner"></span></span>`;
+  }else if(state.error){
+    summaryRight = `<span class="errTag">Error</span>`;
+  }else{
+    summaryRight = `<span class="weth">${formatUnits(state.totalWeth)} WETH</span>`;
+  }
+
+  let body = "";
+  if(state.loading){
+    body = `<div class="empty">Sedang memeriksa...</div>`;
+  }else if(state.error){
+    body = `<div class="empty" style="color:var(--danger)">Gagal: ${state.error}</div>`;
+  }else if(!state.tokens || state.tokens.length === 0){
+    body = `<div class="empty">Tidak ada token Clanker ditemukan untuk address ini.</div>`;
+  }else{
+    body = `<div class="tokenList">${state.tokens.map(t => tokenRowHTML(t, state.feesMap[t.contract_address] || 0n)).join("")}</div>`;
+  }
+
+  details.innerHTML = `
+    <summary>
+      <span class="chev">▶️</span>
+      <span class="addrText">${address}</span>
+      ${summaryRight}
+    </summary>
+    <div class="addrBody">${body}</div>
+  `;
+}
+
+// ---------- main flow ----------
+async function checkOneAddress(address, cardEl){
+  const state = { loading: true, error: null, tokens: null, feesMap: {}, totalWeth: 0n };
+  renderAddressCard(cardEl, address, state);
+
+  try{
+    const tokens = await fetchAllTokensByCreator(address);
+    const wethPromise = getAvailableFees(address, WETH_ADDRESS);
+
+    const feesMap = {};
+    const batchSize = 8;
+    for(let i=0; i<tokens.length; i+=batchSize){
+      const batch = tokens.slice(i, i+batchSize);
+      const results = await Promise.all(batch.map(t => getAvailableFees(address, t.contract_address)));
+      batch.forEach((t, idx) => { feesMap[t.contract_address] = results[idx]; });
+    }
+
+    const totalWeth = await wethPromise;
+
+    state.loading = false;
+    state.tokens = tokens;
+    state.feesMap = feesMap;
+    state.totalWeth = totalWeth;
+    renderAddressCard(cardEl, address, state);
+    return totalWeth;
+  }catch(e){
+    state.loading = false;
+    state.error = e.message;
+    renderAddressCard(cardEl, address, state);
+    return 0n;
+  }
+}
+
+async function runCheckAll(){
+  const addresses = parseAddresses(addrsInput.value);
+  if(addresses.length === 0){
+    statusEl.textContent = "Belum ada address valid terdeteksi. Pastikan format 0x + 40 karakter hex.";
+    statusEl.classList.add("err");
+    return;
+  }
+  statusEl.classList.remove("err");
+  checkBtn.disabled = true;
+  grandTotalBox.style.display = "none";
+  resultsEl.innerHTML = "";
+
+  const cards = addresses.map(addr => {
+    const card = buildAddressCard(addr, { loading: true });
+    resultsEl.appendChild(card);
+    return card;
+  });
+
+  let grandTotal = 0n;
+  for(let i = 0; i < addresses.length; i++){
+    statusEl.innerHTML = `<span class="spinner"></span> Memproses address ${i+1}/${addresses.length}: ${shortAddr(addresses[i])}...`;
+    cards[i].open = (addresses.length <= 3); // auto-expand kalau cuma sedikit address
+    const weth = await checkOneAddress(addresses[i], cards[i]);
+    grandTotal += weth;
+  }
+
+  grandWethEl.textContent = formatUnits(grandTotal);
+  grandSub.textContent = `Digabung dari ${addresses.length} address`;
+  grandTotalBox.style.display = "block";
+  statusEl.textContent = `Selesai memeriksa ${addresses.length} address.`;
+  checkBtn.disabled = false;
+}
+
+checkBtn.addEventListener("click", runCheckAll);
+</script>
+</body>
+</html>
